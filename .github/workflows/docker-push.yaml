@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   NAMESPACE: hanxuning
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: test
 
 jobs:
   build-and-push:
