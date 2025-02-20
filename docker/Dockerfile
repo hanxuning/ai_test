@@ -2,7 +2,6 @@ FROM centos
 RUN /bin/sh -c yum -y install vim
 ADD jdk-8u181-linux-x64.tar.gz /usr/local/
 ADD apache-tomcat-8.5.79.tar.gz /usr/local/tomcat
-COPY readme.txt  /usr/local/readme.txt
 ENV MYPATH /usr/local
 WORKDIR $MYPATH
 ENV JAVA_HOME /usr/local/jdk-8u181
