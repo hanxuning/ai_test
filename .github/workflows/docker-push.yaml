@@ -42,9 +42,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           # 指定构建上下文，这里是项目根目录下的 docker 文件夹
-          context: ../docker
+          context: ./docker
           # 指定 Dockerfile 的路径和文件名
-          file: ../docker/Dockerfile
+          file: ./docker/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
