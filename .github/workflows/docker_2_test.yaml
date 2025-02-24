@@ -3,7 +3,7 @@ name: Docker Image Build and Push
 on:
   push:
     tags:
-      - '*'  # 触发所有标签的推送
+      - 'v*.*.*'  # 触发所有标签的推送
 
 env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
