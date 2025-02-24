@@ -21,20 +21,13 @@ jobs:
         with:
           fetch-depth: 0  # 获取所有历史记录，以便查找标签
 
-      - name: Check all tags
-        run: |
-          echo "Checking existing tags in the repository..."
-          git tag --list  # 查看当前的所有标签
-
       - name: Get the latest tag
         id: get-latest-tag
         run: |
-          # 获取最新标签
           latest_tag=$(git tag --sort=-creatordate | head -n 1)
           if [ -z "$latest_tag" ]; then
-            next_tag="v1"  # 如果没有标签，默认使用 v1
+            next_tag="v1"
           else
-            # 计算下一个标签
             version_number=$(echo $latest_tag | sed 's/^v//')
             next_version_number=$((version_number + 1))
             next_tag="v$next_version_number"
@@ -69,18 +62,14 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          # 指定构建上下文，这里是项目根目录下的 docker 文件夹
           context: ./docker/test1
-          # 指定 Dockerfile 的路径和文件名
           file: ./docker/test1/Dockerfile
           push: true
-          # 使用正确的标签
-          tags: ${{ steps.get-latest-tag.outputs.next_tag }}  # 直接传递 next_tag
+          tags: ${{ steps.meta.outputs.tags }}  # 确保使用 meta 中的 tags 输出
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Create new Git tag
         run: |
-          echo "Creating new Git tag: ${{ steps.get-latest-tag.outputs.next_tag }}"
           git tag ${{ steps.get-latest-tag.outputs.next_tag }}
           git push origin ${{ steps.get-latest-tag.outputs.next_tag }}
 
