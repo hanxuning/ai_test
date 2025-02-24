@@ -62,6 +62,10 @@ jobs:
           tags: |
             type=raw,value=${{ steps.get-latest-tag.outputs.next_tag }}
 
+      - name: Debug metadata tags
+        run: |
+          echo "Tags to be used: ${{ steps.meta.outputs.tags }}"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -70,7 +74,8 @@ jobs:
           # 指定 Dockerfile 的路径和文件名
           file: ./docker/test1/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          # 使用正确的标签
+          tags: ${{ steps.get-latest-tag.outputs.next_tag }}  # 直接传递 next_tag
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Create new Git tag
