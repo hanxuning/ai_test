@@ -29,19 +29,20 @@ jobs:
           username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}
           password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}
 
-      - name: Get version tag (only v1.0.0 or latest)
-        id: get-tag
+      - name: Get latest git tag
+        id: get-latest-tag
         run: |
-          # 获取当前 Git 标签，如果没有则设定为 v1.0.0
-          current_tag=$(git tag --sort=-creatordate | head -n 1)
-          if [ -z "$current_tag" ]; then
-            current_tag="v1.0.0"  # 默认版本
+          # 获取最新的 git 标签，如果没有标签，默认为 v1.0.0
+          latest_tag=$(git tag --sort=-creatordate | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v1.0.0"
           fi
-          echo "current_tag=${current_tag}" >> $GITHUB_ENV  # 设置环境变量
+          echo "latest_tag=${latest_tag}" >> $GITHUB_ENV
+          echo "New version tag: $latest_tag"
 
       - name: Debug version tag
         run: |
-          echo "Using version tag: $current_tag"  # 使用 shell 直接访问环境变量
+          echo "Using version tag: ${{ env.latest_tag }}"
 
       - name: Extract Docker metadata
         id: meta
@@ -49,22 +50,31 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ env.current_tag }}
+            type=raw,value=${{ env.latest_tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker  # 这里是当前目录，指向项目根目录
+          context: ./docker
           push: true
-          file: ./docker/Dockerfile  # 确保这里的路径指向正确的 Dockerfile
+          file: ./docker/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          
-      # 只保留一个版本，删除其他不需要的标签
-      - name: Clean up old tags
+
+      - name: Clean up old duplicate tags
         run: |
-          # 删除除了当前版本外的标签
-          docker rmi ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:latest || true
-          docker rmi ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:other_version_tag || true
+          # 查找仓库中所有现有的标签，删除与当前版本相同的标签
+          current_tag="${{ env.latest_tag }}"
+          # 列出当前仓库中所有的标签
+          existing_tags=$(docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}")
+          
+          for tag in $existing_tags; do
+            # 跳过当前标签
+            if [[ "$tag" != *"$current_tag"* ]]; then
+              # 删除与当前标签相同的镜像标签
+              echo "Removing duplicate tag: $tag"
+              docker rmi $tag || true  # 删除该标签
+            fi
+          done
