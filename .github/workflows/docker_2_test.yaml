@@ -1,76 +1,30 @@
-name: Docker Image Build and Push
+name: Docker Image Build and Push  # 工作流名称
 
 on:
   push:
-    branches: 
-      - main  # 只在主分支上执行
-    tags: 
-      - 'v*.*.*'  # 只处理符合版本号格式的 tag 推送
+    branches: [ main ]  # 当代码 push 到 main 分支时触发
+    tags: [ 'v*.*.*' ]  # 当创建版本标签时触发
   pull_request:
-    branches:
-      - main  # 只在主分支的 PR 上触发
+    branches: [ main ]  # 当有 PR 合并到 main 分支时触发
 
 env:
-  # 自定义的 Docker 镜像仓库
-  REGISTRY: registry.cn-hangzhou.aliyuncs.com
-  NAMESPACE: hanxuning  # 自定义命名空间
-  IMAGE_NAME: ai_test  # 镜像名
+  REGISTRY: registry.cn-hangzhou.aliyuncs.com  # 镜像仓库地址（阿里云）
+  NAMESPACE: hanxuning  # 镜像命名空间
+  IMAGE_NAME: ai_test  # 镜像名称
 
 jobs:
-  build:
-
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # 读取代码
-      packages: write  # 写入包
-      id-token: write  # 用于签名和生成身份验证令牌
+      contents: read
+      packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4  # 检出代码库
+      - name: Checkout repository  # 拉取代码
+        uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx，支持多平台构建
+      - name: Set up Docker Buildx  # 设置 Docker Buildx，支持多平台构建
+        uses: docker/setup-buildx-action@v3
 
-      - name: Log into registry
-        uses: docker/login-action@v3  # 登录到 Docker Registry
-        with:
-          registry: ${{ env.REGISTRY }}  # 使用自定义的 Docker 镜像仓库
-          username: ${{ secrets.ALIYUN_REGISTRY_USERNAME }}  # 从 Secrets 中获取用户名
-          password: ${{ secrets.ALIYUN_REGISTRY_PASSWORD }}  # 从 Secrets 中获取密码
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5  # 提取镜像元数据（例如标签、版本等）
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}  # 自定义镜像仓库和镜像名称
-          tags: |
-            type=ref,event=branch  # 根据分支名称生成标签
-            type=ref,event=tag  # 根据标签生成镜像标签
-
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@v5  # 构建并推送 Docker 镜像
-        with:
-          context: .  # 构建上下文是当前目录
-          file: ./docker/Dockerfile  # 指定 Dockerfile 的路径
-          push: ${{ github.event_name != 'pull_request' }}  # 如果是 PR 事件，不推送镜像
-          tags: ${{ steps.meta.outputs.tags }}  # 使用提取的标签
-          labels: ${{ steps.meta.outputs.labels }}  # 使用提取的标签信息
-          cache-from: type=gha  # 使用 GitHub Actions 缓存
-          cache-to: type=gha,mode=max  # 启用最大缓存模式
-
-      - name: Install cosign
-        if: ${{ github.event_name != 'pull_request' }}  # 仅在非 PR 事件时执行
-        run: |
-          curl -Lo cosign https://github.com/sigstore/cosign/releases/download/v2.2.4/cosign-linux-amd64
-          chmod +x cosign
-          mv cosign /usr/local/bin/  # 安装 cosign 工具
-
-      - name: Sign the published Docker image
-        if: ${{ github.event_name != 'pull_request' }}  # 仅在非 PR 事件时执行签名
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}  # 获取镜像标签
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}  # 获取镜像的 digest（摘要）
-        run: |
-          echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}  # 使用 cosign 工具签名镜像
+      - name: Log in to the Container registry  # 登录阿里云镜像仓库
+    
