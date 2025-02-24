@@ -1,5 +1,5 @@
 FROM centos
-RUN /bin/sh -c yum -y install vim utils  openssl tar
+RUN /bin/sh -c yum -y install vim utils 
 RUN mkdir test
 
 
