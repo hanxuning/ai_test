@@ -60,6 +60,13 @@ jobs:
           cache-from: type=gha  # 使用 GitHub Actions 缓存
           cache-to: type=gha,mode=max  # 启用最大缓存模式
 
+      - name: Install cosign
+        if: ${{ github.event_name != 'pull_request' }}  # 仅在非 PR 事件时执行
+        run: |
+          curl -Lo cosign https://github.com/sigstore/cosign/releases/download/v2.2.4/cosign-linux-amd64
+          chmod +x cosign
+          mv cosign /usr/local/bin/  # 安装 cosign 工具
+
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}  # 仅在非 PR 事件时执行签名
         env:
