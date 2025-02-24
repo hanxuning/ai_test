@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   NAMESPACE: hanxuning
-  IMAGE_NAME: test
+  IMAGE_NAME: ai_test
 
 jobs:
   build-and-push:
