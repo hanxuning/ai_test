@@ -1,80 +1,76 @@
-name: Docker
+name: 2
 
 on:
   schedule:
-    - cron: $cron-daily
+    - cron: $cron-daily  # 定时触发，例如每天构建
   push:
-    branches: [ $default-branch ]
-    # Publish semver tags as releases.
-    tags: [ 'v*.*.*' ]
+    branches: [ $default-branch ]  # 当推送到默认分支时触发，例如 `main`
+    tags: [ 'v*.*.*' ]  # 发布符合 semver 规范的标签时触发
   pull_request:
-    branches: [ $default-branch ]
+    branches: [ $default-branch ]  # 当有 PR 请求合并到默认分支时触发
 
 env:
-  # 这里指定你的镜像仓库地址，替换为你自己的仓库
+  # 设置你的镜像仓库地址，替换为你自己的仓库
   REGISTRY: registry.your-registry.com
   # 使用 GitHub 仓库名称作为镜像名称，确保它符合你的镜像命名规则
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # 使用 Ubuntu 最新版本的虚拟环境
     permissions:
-      contents: read
-      packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      id-token: write
+      contents: read  # 仓库内容的读取权限
+      packages: write  # 镜像推送到仓库的权限
+      id-token: write  # 用于获取签名令牌（用于签署 Docker 镜像）
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # 检出代码仓库
 
-      # Install the cosign tool except on PR
+      # 安装 cosign 工具（除非是 PR，才会跳过这一步）
       - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 #v3.5.0
+        if: github.event_name != 'pull_request'  # 只有在 PR 事件外才执行
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # 安装 cosign 工具
         with:
-          cosign-release: 'v2.2.4'
+          cosign-release: 'v2.2.4'  # 使用 cosign v2.2.4 版本
 
-      # Set up BuildKit Docker container builder to be able to build
-      # multi-platform images and export cache
+      # 设置 Docker Buildx，允许多平台构建以及导出缓存
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # 设置 Docker Buildx
 
-      # Log in to Docker registry (replace with your registry credentials)
+      # 登录 Docker 仓库（除非是 PR，才会跳过这一步）
       - name: Log into registry ${{ env.REGISTRY }}
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        if: github.event_name != 'pull_request'  # 只有在 PR 事件外才执行
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # 登录 Docker 仓库
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_USERNAME }}  # 使用你自己的用户名
-          password: ${{ secrets.DOCKER_PASSWORD }}  # 使用你自己的密码或 token
+          registry: ${{ env.REGISTRY }}  # 镜像仓库地址
+          username: ${{ secrets.DOCKER_USERNAME }}  # 使用你自己的仓库用户名，保存在 GitHub Secrets 中
+          password: ${{ secrets.DOCKER_PASSWORD }}  # 使用你自己的仓库密码或 token，保存在 GitHub Secrets 中
 
-      # Extract metadata (tags, labels) for Docker
+      # 提取 Docker 镜像的元数据（标签、标签信息等）
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # 提取 Docker 镜像元数据
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}  # 镜像名称
 
-      # Build and push Docker image with Buildx (don't push on PR)
+      # 使用 Buildx 构建并推送 Docker 镜像（PR 事件不会推送）
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # 构建并推送 Docker 镜像
         with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          context: .  # 设置构建上下文，当前目录
+          push: ${{ github.event_name != 'pull_request' }}  # 如果是 PR 事件，不推送镜像
+          tags: ${{ steps.meta.outputs.tags }}  # 使用提取的标签
+          labels: ${{ steps.meta.outputs.labels }}  # 使用提取的标签信息
+          cache-from: type=gha  # 使用 GitHub Actions 缓存
+          cache-to: type=gha,mode=max  # 启用最大缓存模式
 
-      # Sign the published Docker image
+      # 对发布的 Docker 镜像进行签名（PR 事件不会签名）
       - name: Sign the published Docker image
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' }}  # 只有在 PR 事件外才执行签名
         env:
-          # 使用 GitHub 上生成的 tags 和 digest
+          # 使用提取的 tags 和 digest
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}  # 使用 cosign 对镜像签名
