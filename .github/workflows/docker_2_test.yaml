@@ -47,7 +47,9 @@ jobs:
             latest  # 最新版本标签
 
       - name: Debug metadata  # 输出 tags 以便调试
-        run: echo "Generated tags: ${{ steps.meta.outputs.tags }}"
+        run: |
+          echo "Generated tags: ${{ steps.meta.outputs.tags }}"
+          echo "Generated labels: ${{ steps.meta.outputs.labels }}"
 
       - name: Build and push Docker image  # 构建并推送 Docker 镜像
         uses: docker/build-push-action@v5
