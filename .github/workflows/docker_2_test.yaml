@@ -44,7 +44,7 @@ jobs:
             type=semver,pattern=v{{major}}
             type=ref,event=branch
             type=ref,event=tag
-            latest
+            latest  # 最新版本标签
 
       - name: Debug metadata  # 输出 tags 以便调试
         run: echo "Generated tags: ${{ steps.meta.outputs.tags }}"
