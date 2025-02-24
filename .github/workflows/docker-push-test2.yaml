@@ -1,17 +1,15 @@
-name: test Docker Image Build and Push
+name: Docker Image Build and Push
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'  # 匹配以 v 开头的标签，如 v1, v2, v1.0.1 等
   workflow_dispatch:
 
 env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   NAMESPACE: hanxuning
-  IMAGE_NAME: test
+  IMAGE_NAME: ai_test
 
 jobs:
   build-and-push:
@@ -37,7 +35,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=tag  # 根据 Git 标签生成镜像标签
+            type=ref,event=branch  # 仅使用分支名作为标签，避免重复标签
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -45,5 +43,5 @@ jobs:
           context: ./docker
           file: ./docker/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}  # 直接使用生成的标签
+          labels: ${{ steps.meta.outputs.labels }}  # 直接使用生成的标签
