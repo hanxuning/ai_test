@@ -54,8 +54,9 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./docker  # 这里是当前目录，指向项目根目录
           push: true
+          file: ./docker/Dockerfile  # 确保这里的路径指向正确的 Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
