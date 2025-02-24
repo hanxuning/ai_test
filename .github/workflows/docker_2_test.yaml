@@ -42,8 +42,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./docker
           push: true
-          file: ./Dockerfile
+          file: ./docker/Dockerfile
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.TAG_NAME }}  # 使用 Git 标签作为镜像标签
           labels: version=${{ env.TAG_NAME }}
