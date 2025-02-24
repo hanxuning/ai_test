@@ -1,15 +1,17 @@
-name: Docker Image Build and Push with Auto Tagging
+name: test Docker Image Build and Push
 
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'  # 匹配以 v 开头的标签，如 v1, v2, v1.0.1 等
   workflow_dispatch:
 
 env:
   REGISTRY: registry.cn-hangzhou.aliyuncs.com
   NAMESPACE: hanxuning
-  IMAGE_NAME: ai_test
+  IMAGE_NAME: test
 
 jobs:
   build-and-push:
@@ -18,24 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 获取所有历史记录，以便查找标签
-
-      - name: Get the latest tag
-        id: get-latest-tag
-        run: |
-          latest_tag=$(git tag --sort=-creatordate | head -n 1)
-          if [ -z "$latest_tag" ]; then
-            next_tag="v1"
-          else
-            version_number=$(echo $latest_tag | sed 's/^v//')
-            next_version_number=$((version_number + 1))
-            next_tag="v$next_version_number"
-          fi
-          echo "next_tag=$next_tag" >> $GITHUB_OUTPUT
-
-      - name: Debug latest tag
-        run: echo "Next tag: ${{ steps.get-latest-tag.outputs.next_tag }}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -53,23 +37,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=${{ steps.get-latest-tag.outputs.next_tag }}
-
-      - name: Debug metadata tags
-        run: |
-          echo "Tags to be used: ${{ steps.meta.outputs.tags }}"
+            type=ref,event=tag  # 根据 Git 标签生成镜像标签
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker/test1
-          file: ./docker/test1/Dockerfile
+          context: ./docker
+          file: ./docker/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}  # 确保使用 meta 中的 tags 输出
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Create new Git tag
-        run: |
-          git tag ${{ steps.get-latest-tag.outputs.next_tag }}
-          git push origin ${{ steps.get-latest-tag.outputs.next_tag }}
-
