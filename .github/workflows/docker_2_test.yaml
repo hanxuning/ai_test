@@ -37,10 +37,11 @@ jobs:
           if [ -z "$current_tag" ]; then
             current_tag="v1.0.0"  # 默认版本
           fi
-          echo "current_tag=${current_tag}" >> $GITHUB_ENV
+          echo "current_tag=${current_tag}" >> $GITHUB_ENV  # 设置环境变量
 
       - name: Debug version tag
-        run: echo "Using version tag: ${{ env.current_tag }}"
+        run: |
+          echo "Using version tag: $current_tag"  # 使用 shell 直接访问环境变量
 
       - name: Extract Docker metadata
         id: meta
