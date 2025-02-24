@@ -1,8 +1,6 @@
 name: 2
 
 on:
-  schedule:
-    - cron: $cron-daily  # 定时触发，例如每天构建
   push:
     branches: [ $default-branch ]  # 当推送到默认分支时触发，例如 `main`
     tags: [ 'v*.*.*' ]  # 发布符合 semver 规范的标签时触发
