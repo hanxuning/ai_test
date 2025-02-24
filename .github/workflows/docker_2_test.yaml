@@ -32,7 +32,6 @@ jobs:
       - name: Get latest git tag
         id: get-latest-tag
         run: |
-          # 获取最新的 git 标签，如果没有标签，默认为 v1.0.0
           latest_tag=$(git tag --sort=-creatordate | head -n 1)
           if [ -z "$latest_tag" ]; then
             latest_tag="v1.0.0"
@@ -63,18 +62,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Clean up old duplicate tags
+      - name: Clean up old duplicate tags (using Aliyun registry API)
         run: |
-          # 查找仓库中所有现有的标签，删除与当前版本相同的标签
           current_tag="${{ env.latest_tag }}"
-          # 列出当前仓库中所有的标签
-          existing_tags=$(docker image ls --format "{{.Repository}}:{{.Tag}}" | grep "${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}")
-          
-          for tag in $existing_tags; do
-            # 跳过当前标签
-            if [[ "$tag" != *"$current_tag"* ]]; then
-              # 删除与当前标签相同的镜像标签
-              echo "Removing duplicate tag: $tag"
-              docker rmi $tag || true  # 删除该标签
-            fi
-          done
+          # 使用 Aliyun API 或 Docker CLI 删除远程重复标签
+          echo "Deleting duplicate tags for image: ${current_tag}"
+          # 列出所有远程标签并删除
+          curl -u "${{ secrets.ALIYUN_REGISTRY_USERNAME }}:${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" \
+            -X GET "https://$REGISTRY/v2/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}/tags/list" \
+            | jq -r ".tags[] | select(. != \"$current_tag\")" \
+            | while read tag; do
+                echo "Deleting tag $tag"
+                curl -u "${{ secrets.ALIYUN_REGISTRY_USERNAME }}:${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" \
+                  -X DELETE "https://$REGISTRY/v2/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}/manifests/$(curl -s -u "${{ secrets.ALIYUN_REGISTRY_USERNAME }}:${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" \
+                    -X GET "https://$REGISTRY/v2/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}/manifests/$tag" | jq -r '.config.digest')"
+              done
